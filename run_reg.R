@@ -59,57 +59,85 @@ run_nodose_model <- function(df, outcome){
 
 out_col <- c('Esophagus', 'lung', 'Parkinsons', 'Ischemic', 'CLL', 'AML', 'NonCLL_excAML', "Heart_excIsch", "AllLymphHema_excLeukAleuk", "AllCancer_excElse", "allevent", "censored")
 # Esophagus
-sink("NEW_RUNS/eso.txt")
+zz <- file("NEW_RUNS/eso.txt", open = "wt")
+sink(zz)
+sink(zz, type = "message")
 outcomes <- c("Esophagus")
 dose <- "cumulative_dose_esophagus_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
+sink(type = "message")
 sink(NULL)
+close(zz)
 # Lung
-sink("NEW_RUNS/lung.txt")
+zz <- file("NEW_RUNS/lung.txt", open = "wt")
+sink(zz)
+sink(zz, type = "message")
 outcomes <- c("lung")
 dose <- "cumulative_dose_lung_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
+sink(type = "message")
 sink(NULL)
+close(zz)
 # Brain
-sink("NEW_RUNS/brain.txt")
+zz <- file("NEW_RUNS/brain.txt", open = "wt")
+sink(zz)
+sink(zz, type = "message")
 outcomes <- c("Parkinsons")
 dose <- "cumulative_dose_brain_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
+sink(type = "message")
 sink(NULL)
+close(zz)
 # Heart
-sink("NEW_RUNS/heart.txt")
+zz <- file("NEW_RUNS/heart.txt", open = "wt")
+sink(zz)
+sink(zz, type = "message")
 outcomes <- c("Ischemic", "Heart_excIsch")
 dose <- "cumulative_dose_heart_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
+sink(type = "message")
 sink(NULL)
+close(zz)
 # Colon
-sink("NEW_RUNS/colon.txt")
+zz <- file("NEW_RUNS/colon.txt", open = "wt")
+sink(zz)
+sink(zz, type = "message")
 outcomes <- c("CLL", "AML", "NonCLL_excAML", "AllLymphHema_excLeukAleuk")
 dose <- "cumulative_dose_colon_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
+sink(type = "message")
 sink(NULL)
+close(zz)
 # All
-sink("NEW_RUNS/all.txt")
+zz <- file("NEW_RUNS/all.txt", open = "wt")
+sink(zz)
+sink(zz, type = "message")
 outcomes <- c("AllCancer_excElse")#, "allevent", "censored")
 dose <- "cumulative_dose_colon_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
+sink(type = "message")
 sink(NULL)
+close(zz)
 # None
-sink("NEW_RUNS/none.txt")
+zz <- file("NEW_RUNS/none.txt", open = "wt")
+sink(zz)
+sink(zz, type = "message")
 outcomes <- c( "censored")
 for (outcome in outcomes){
     run_nodose_model(df, outcome)
 }
+sink(type = "message")
 sink(NULL)
+close(zz)

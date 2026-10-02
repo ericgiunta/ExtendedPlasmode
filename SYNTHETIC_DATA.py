@@ -39,7 +39,7 @@ cumulative_dose_bonem_lag10 = []
 cumulative_dose_heart_lag10 = []
 
 # Now we randomly generate data
-N = 100 # number of subjects
+N = 1000 # number of subjects
 # Randomly sample the constant data
 studyid_person = ["SUBJ_"+"0"*(len(str(N+1)) - len(str(i+1))) + str(i+1) for i in range(N)] # Study ID
 ses_highest = np.random.choice(["Low", "High", "Medium"], N, True, [0.24, 0.26, 0.50]) # sampling with total probability
@@ -86,17 +86,17 @@ for i in range(N):
         year.append(year0+j)
         # now we need to randomly assign doses
         # Each dose can be zero or non-dose, then ranging from 1e-3 to 1e3
-        heart_dose = np.random.choice([0,1], 1, True, [0.25, 0.75]) * np.random.rand(1) * np.random.choice([1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3], 1, True, [0.01, 0.1, 0.2, 0.38, 0.2, 0.1, 0.01])
-        nonheart_dose = np.random.choice([0,1], 1, True, [0.25, 0.75]) * np.random.rand(1) * np.random.choice([1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3], 1, True, [0.01, 0.1, 0.2, 0.38, 0.2, 0.1, 0.01])
+        heart_dose = (np.random.choice([0,1], 1, True, [0.25, 0.75]) * np.random.rand(1) * np.random.choice([1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2], 1, True, [0.02, 0.15, 0.25, 0.38, 0.15, 0.05]))[0]
+        nonheart_dose = (np.random.choice([0,1], 1, True, [0.25, 0.75]) * np.random.rand(1) * np.random.choice([1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2], 1, True, [0.02, 0.15, 0.25, 0.38, 0.15, 0.05]))[0]
         # Now we accumulate heart
         annual_heart += heart_dose
         # We slightly vary the nonheart doses
         #               general dose           1% chance to be zero regardless                # varying by 5%
-        annual_brain += nonheart_dose * np.random.choice([0,1], 1, True, [0.01, 0.99]) * (1 + 0.1*(np.random.rand()-0.5))
-        annual_colon += nonheart_dose * np.random.choice([0,1], 1, True, [0.01, 0.99]) * (1 + 0.1*(np.random.rand()-0.5))
-        annual_esophagus += nonheart_dose * np.random.choice([0,1], 1, True, [0.01, 0.99]) * (1 + 0.1*(np.random.rand()-0.5))
-        annual_lung += nonheart_dose * np.random.choice([0,1], 1, True, [0.01, 0.99]) * (1 + 0.1*(np.random.rand()-0.5))
-        annual_bonem += nonheart_dose * np.random.choice([0,1], 1, True, [0.01, 0.99]) * (1 + 0.1*(np.random.rand()-0.5))
+        annual_brain += (nonheart_dose * np.random.choice([0,1], 1, True, [0.01, 0.99]) * (1 + 0.1*(np.random.rand()-0.5)))[0]
+        annual_colon += (nonheart_dose * np.random.choice([0,1], 1, True, [0.01, 0.99]) * (1 + 0.1*(np.random.rand()-0.5)))[0]
+        annual_esophagus += (nonheart_dose * np.random.choice([0,1], 1, True, [0.01, 0.99]) * (1 + 0.1*(np.random.rand()-0.5)))[0]
+        annual_lung += (nonheart_dose * np.random.choice([0,1], 1, True, [0.01, 0.99]) * (1 + 0.1*(np.random.rand()-0.5)))[0]
+        annual_bonem += (nonheart_dose * np.random.choice([0,1], 1, True, [0.01, 0.99]) * (1 + 0.1*(np.random.rand()-0.5)))[0]
         #
         cumulative_dose_brain_lag10.append(annual_brain)
         cumulative_dose_colon_lag10.append(annual_colon)
@@ -104,6 +104,7 @@ for i in range(N):
         cumulative_dose_lung_lag10.append(annual_lung)
         cumulative_dose_bonem_lag10.append(annual_bonem)
         cumulative_dose_heart_lag10.append(annual_heart)
+
 
 df_person = pd.DataFrame({'StudyID':studyid_person,
     'SES_HighestEd':ses_highest,
@@ -129,6 +130,7 @@ df_brain = pd.DataFrame({
     'StudyID':StudyID,
     'age_entry':age_entry,
     'age_exit':age_exit,
+    'year':year,
     'cumulative_dose_brain_lag10':cumulative_dose_brain_lag10,
     'SeqNo':range(len(age_entry))
 })
@@ -136,6 +138,7 @@ df_colon = pd.DataFrame({
     'StudyID':StudyID,
     'age_entry':age_entry,
     'age_exit':age_exit,
+    'year':year,
     'cumulative_dose_colon_lag10':cumulative_dose_colon_lag10,
     'SeqNo':range(len(age_entry))
 })
@@ -143,6 +146,7 @@ df_eso = pd.DataFrame({
     'StudyID':StudyID,
     'age_entry':age_entry,
     'age_exit':age_exit,
+    'year':year,
     'cumulative_dose_esophagus_lag10':cumulative_dose_esophagus_lag10,
     'SeqNo':range(len(age_entry))
 })
@@ -150,6 +154,7 @@ df_lung = pd.DataFrame({
     'StudyID':StudyID,
     'age_entry':age_entry,
     'age_exit':age_exit,
+    'year':year,
     'cumulative_dose_lung_lag10':cumulative_dose_lung_lag10,
     'SeqNo':range(len(age_entry))
 })
@@ -157,6 +162,7 @@ df_bonem = pd.DataFrame({
     'StudyID':StudyID,
     'age_entry':age_entry,
     'age_exit':age_exit,
+    'year':year,
     'cumulative_dose_bonem_lag10':cumulative_dose_bonem_lag10,
     'SeqNo':range(len(age_entry))
 })
@@ -164,6 +170,7 @@ df_heart = pd.DataFrame({
     'StudyID':StudyID,
     'age_entry':age_entry,
     'age_exit':age_exit,
+    'year':year,
     'cumulative_dose_heart_lag10':cumulative_dose_heart_lag10,
     'SeqNo':range(len(age_entry))
 })

@@ -64,6 +64,7 @@ df_person = df_person.with_columns(
 )
 df_person = df_person.with_columns(
     censored = pl.lit(1) - pl.col("allevent")
+)
 person_columns = ['StudyID', 'yob_cat10', 'yob_cat6', 'SES_HighestEd', 'YOH', "YOB", 'duremp', 'sexm', 'SeqNo', 'Esophagus', 'lung', 'Parkinsons', 'Ischemic', 'CLL', 'AML', 'NonCLL_excAML', "Heart_excIsch", "AllLymphHema_excLeukAleuk", "AllCancer_excElse", "allevent", "censored"]
 
 df_person = df_person.select(person_columns)
@@ -90,12 +91,11 @@ df_total.write_csv("df_total.csv")
 total_columns = ['StudyID', 'age_entry', 'age_exit', 'yob_cat10', 'yob_cat6', 'YOH', 'YOB', 'year', 'duremp', 'SES_HighestEd', 'sexm', 'cumulative_dose_colon_lag10', 'cumulative_dose_heart_lag10', 'cumulative_dose_brain_lag10', 'cumulative_dose_bonem_lag10', 'cumulative_dose_lung_lag10', 'cumulative_dose_esophagus_lag10', 'SeqNo']
 df_total = df_total.select(total_columns)
 ## ------------------------------------------------------------ PULL OUT THE MGY DOSE, NOT THE MSV DOSE ----------------------------------------- ##
-
-df_minage = df_total.group_by("StudyID").min()
+df_minage = df_total.select(["StudyID", "age_exit"]).group_by("StudyID").min()
 df_minage = df_minage.with_columns(age_min = pl.col("age_exit"))
 df_total = df_total.join(df_minage.select(["StudyID", "age_min"]), on = "StudyID")
 
-df_maxage = df_total.group_by("StudyID").max()
+df_maxage = df_total.select(["StudyID", "age_exit"]).group_by("StudyID").max()
 df_maxage = df_maxage.with_columns(age_max = pl.col("age_exit"))
 df_total = df_total.join(df_maxage.select(["StudyID", "age_max"]), on = "StudyID")
 
@@ -209,6 +209,111 @@ for col in ['colon', 'heart', 'brain', 'bonem', 'lung', 'esophagus']:
     df_tot[name0] = df_tot.groupby('StudyID')[name1].cumsum() / 1000
 #
 df_tot[col_keep].to_csv("OG_data.csv")
+
+## --------------------------------------------- Extend with constant ----------------------------------------------------- ##
+
+df_tot = pd.read_csv("preped_data.csv")
+dbins = [0]+list(np.logspace(-5,np.log10(650),40))
+dbins = [float("{:.3e}".format(i)) for i in dbins]
+
+df_dose_maxage = df_tot.groupby("StudyID").max()
+df_dose_maxage = df_dose_maxage[["age_entry"]]
+df_dose_maxage.columns = ["age_max"]
+df_person = df_tot.join(df_dose_maxage, on = "StudyID")
+
+subj_ids = df_person.StudyID
+rng = np.random.default_rng(seed = 374221226)
+
+col_keep = ['StudyID', 'age_entry',
+       'age_exit', 'SES_HighestEd',
+       'sexm', 'yob_cat10', 'yob_cat6',
+       'annual_dose_mgy_colon_lag10', 'cumulative_dose_colon_lag10',
+       'annual_dose_mgy_heart_lag10', 'cumulative_dose_heart_lag10',
+       'annual_dose_mgy_brain_lag10', 'cumulative_dose_brain_lag10',
+       'annual_dose_mgy_bonem_lag10', 'cumulative_dose_bonem_lag10',
+       'annual_dose_mgy_lung_lag10', 'cumulative_dose_lung_lag10',
+       'annual_dose_mgy_esophagus_lag10', 'cumulative_dose_esophagus_lag10',
+       ]
+N = 1
+
+for subj_i in range(N):
+    print("Dataset: " + str(subj_i))
+    #
+    df_person_start = df_person.copy()
+    # --------------------------------------------------------------------------------------------------------------------------- #
+
+    df_gen    = df_person_start[df_person_start["age_entry"] <= df_person_start["age_max"]].copy()
+    df_next = df_person_start[df_person_start["age_entry"] == df_person_start["age_max"]].copy()
+
+    df_next["colon_next"] = 0.0
+    df_next["heart_next"] = 0.0
+    df_next["brain_next"] = 0.0
+    df_next["bone_next"] = 0.0
+    df_next["lung_next"] = 0.0
+    df_next["esophagus_next"] = 0.0
+    #
+    df_next["colon_bin_next"] = 0.0
+    df_next["heart_bin_next"] = 0.0
+    df_next["brain_bin_next"] = 0.0
+    df_next["bone_bin_next"] = 0.0
+    df_next["lung_bin_next"] = 0.0
+    df_next["esophagus_bin_next"] = 0.0
+    #
+    df_next.drop(['age_max'], axis = 1, inplace = True)
+    df_gen.drop(['age_max'], axis = 1, inplace = True)
+    count = 0
+    while len(df_next.index) > 0:
+        # ------------------------------------------------------------------ # Colon
+        count += 1
+        if count > 90:
+            break
+        df_next["colon_next"] = [0]*len(df_next.index)
+        df_next["colon_bin_next"] = [1]*len(df_next.index)
+        # ------------------------------------------------------------------ # Heart
+        df_next["heart_next"] = [0]*len(df_next.index)
+        df_next["heart_bin_next"] = [1]*len(df_next.index)
+        # ------------------------------------------------------------------ # Brain
+        df_next["brain_next"] = [0]*len(df_next.index)
+        df_next["brain_bin_next"] = [1]*len(df_next.index)
+        # ------------------------------------------------------------------ # Bone
+        df_next["bone_next"] = [0]*len(df_next.index)
+        df_next["bone_bin_next"] = [1]*len(df_next.index)
+        # ------------------------------------------------------------------ # Lung
+        df_next["lung_next"] = [0]*len(df_next.index)
+        df_next["lung_bin_next"] = [1]*len(df_next.index)
+        # ------------------------------------------------------------------ # Esophagus
+        df_next["esophagus_next"] = [0]*len(df_next.index)
+        df_next["esophagus_bin_next"] = [1]*len(df_next.index)
+        # ---------------------------------------------------------- #
+        df_next["age_entry"] = df_next["age_exit"]
+        df_next["age_exit"] = df_next["age_entry"] + 1
+        #
+        for col in ['colon', 'heart', 'brain', 'bone', 'lung', 'esophagus']:
+            name0 = 'annual_dose_mgy_' + col + '_lag10'
+            name1 = col + '_next'
+            name2 = col + '_bin'
+            name3 = col + '_bin_next'
+            df_next[name0] = df_next[name1]
+            df_next[name2] = df_next[name3]
+        df_next["annual_dose_mgy_bonem_lag10"] = df_next["annual_dose_mgy_bone_lag10"]
+        #
+        for col in ["colon_next","heart_next","brain_next","bone_next","lung_next","esophagus_next", "colon_bin_next","heart_bin_next","brain_bin_next","bone_bin_next","lung_bin_next","esophagus_bin_next"]:
+            df_next[col] = 0.0
+        #
+        df_next = df_next[df_next["age_exit"] < 96]
+        df_gen = pd.concat([df_gen, df_next])
+    df_gen.reset_index(drop = True, inplace = True)
+    yob = df_gen.YOB
+    df_gen["SES_HighestEd"] = pd.cut(df_gen["SES_HighestEd"], [-0.5,0.5,1.5,2.5], right = True, include_lowest = True, labels = ["Low","Medium","High"])
+    # --------------------------------------------------------------------------------------------------------------------------- #
+    df_gen.sort_values(['StudyID','age_entry'], ascending=[True,True],inplace=True)
+    #
+    for col in ['colon', 'heart', 'brain', 'bonem', 'lung', 'esophagus']:
+        name0 = 'cumulative_dose_' + col + '_lag10'
+        name1 = 'annual_dose_mgy_' + col + '_lag10'
+        df_gen[name0] = df_gen.groupby('StudyID')[name1].cumsum() / 1000
+    #
+    df_gen[col_keep].to_csv("NO_EVENTS/Subj_"+str(subj_i)+"_CONST.csv")
 
 ## ---------------------------------------------- Next the Parametric models -------------------------------------------------------------------------------------- ##
 
@@ -396,7 +501,6 @@ for subj_i in range(N):
     df_gen.drop(['age_max'], axis = 1, inplace = True)
     count = 0
     while len(df_next.index) > 0:
-        print(len(df_next.index))
         # ------------------------------------------------------------------ # prep prev
         df_next["heart_prev"] = df_next["annual_dose_mgy_heart_lag10"]
         df_next["heart_prev_zero"] = (df_next["heart_prev"] == 0)
@@ -576,7 +680,7 @@ for subj_i in range(N):
         name1 = 'annual_dose_mgy_' + col + '_lag10'
         df_gen[name0] = df_gen.groupby('StudyID')[name1].cumsum() / 1000
     #
-    df_gen[col_keep].to_csv("NO_EVENTS/Subj_PARA_"+str(subj_i)+".csv")
+    df_gen[col_keep].to_csv("NO_EVENTS/Subj_"+str(subj_i)+"_PARA.csv")
 
 ## ---------------------------------------------- Finally the Random Forest models -------------------------------------------------------------------------------------- ##
 df_tot = pd.read_csv("preped_data.csv")
@@ -716,7 +820,6 @@ for subj_i in range(N):
     #df_next = df_gen.copy()
     count = 0
     while len(df_next.index) > 0:
-        print(len(df_next.index))
         # ------------------------------------------------------------------ # Colon
         X_next_colon = df_next[x_col_colon]
         count += 1
@@ -736,6 +839,8 @@ for subj_i in range(N):
                     break
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -763,6 +868,8 @@ for subj_i in range(N):
                     break
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -790,6 +897,8 @@ for subj_i in range(N):
                     break
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -817,6 +926,8 @@ for subj_i in range(N):
                     break
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -844,6 +955,8 @@ for subj_i in range(N):
                     break
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -871,6 +984,8 @@ for subj_i in range(N):
                     break
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -910,13 +1025,13 @@ for subj_i in range(N):
         name1 = 'annual_dose_mgy_' + col + '_lag10'
         df_gen[name0] = df_gen.groupby('StudyID')[name1].cumsum() / 1000
     #
-    df_gen[col_keep].to_csv("NO_EVENTS/Subj_RF_"+str(subj_i)+".csv")
+    df_gen[col_keep].to_csv("NO_EVENTS/Subj_"+str(subj_i)+"_RF.csv")
 
 ## ------------------------------------------------------------------- And the Random Forest Directly Predicting doses ------------------------ ##
 
 rng = np.random.default_rng(seed = 374221226)
 #
-N = 1
+N = 10
 
 
 col_keep = ['StudyID', 'age_entry',
@@ -956,7 +1071,6 @@ for subj_i in range(N):
     df_gen.drop(['age_max'], axis = 1, inplace = True)
     count = 0
     while len(df_next.index) > 0:
-        print(len(df_next.index))
         # ------------------------------------------------------------------ # Colon
         X_next_colon = df_next[x_col_colon]
         count += 1
@@ -968,6 +1082,8 @@ for subj_i in range(N):
             true_bin = int(true_bin)
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -985,6 +1101,8 @@ for subj_i in range(N):
             true_bin = int(true_bin)
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -1002,6 +1120,8 @@ for subj_i in range(N):
             true_bin = int(true_bin)
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -1019,6 +1139,8 @@ for subj_i in range(N):
             true_bin = int(true_bin)
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -1036,6 +1158,8 @@ for subj_i in range(N):
             true_bin = int(true_bin)
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -1053,6 +1177,8 @@ for subj_i in range(N):
             true_bin = int(true_bin)
             if true_bin <= 1:
                 dose = 0.0;
+            elif true_bin >= len(dbins):
+                dose = dbins[-1]
             else:
                 bin_low = dbins[true_bin-1]
                 bin_high = dbins[true_bin]
@@ -1092,7 +1218,7 @@ for subj_i in range(N):
         name1 = 'annual_dose_mgy_' + col + '_lag10'
         df_gen[name0] = df_gen.groupby('StudyID')[name1].cumsum() / 1000
     #
-    df_gen[col_keep].to_csv("NO_EVENTS/Subj_RF_CATEG_"+str(subj_i)+".csv")
+    df_gen[col_keep].to_csv("NO_EVENTS/Subj_"+str(subj_i)+"_RF_CATEG.csv")
     
 '''
 To calculate the accuracy plots, the loops were updated so that 'df_next' was replaced with 'df_person_start', 'df_gen' was removed, and the 'while len(df_next.index) > 0' loop was removed
@@ -1142,12 +1268,12 @@ for subj_i in range(N):
     # ---------------------------------------------------------- #
     df_person_start["next_ident"] = "00"
     # We start by splitting based on the previous values
-    df11 = df_person_start[df_person_start["heart_prev_zero"] == True]
-    df10 = df11[df11["nonheart_prev_zero"] == False]  # Heart nonzero
-    df11 = df11[df11["nonheart_prev_zero"] == True] # Both nonzero
-    df00 = df_person_start[df_person_start["heart_prev_zero"] == False]
-    df01 = df00[df00["nonheart_prev_zero"] == True] # Nonheart nonzero
-    df00 = df00[df00["nonheart_prev_zero"] == False]  # both zero
+    df11 = df_person_start[df_person_start["heart_prev_zero"] == True].copy()
+    df10 = df11[df11["nonheart_prev_zero"] == False].copy()  # Heart nonzero
+    df11 = df11[df11["nonheart_prev_zero"] == True].copy() # Both nonzero
+    df00 = df_person_start[df_person_start["heart_prev_zero"] == False].copy()
+    df01 = df00[df00["nonheart_prev_zero"] == True].copy() # Nonheart nonzero
+    df00 = df00[df00["nonheart_prev_zero"] == False].copy()  # both zero
     # Now we need to determine the probabilities of each falling into each combination of zero/nonzero
     # We want to generate random values, and then assign results based on the cumulative probabilities
     # Now we assign back to df_next
@@ -1173,10 +1299,10 @@ for subj_i in range(N):
         df11.loc[:,"next_ident"] = res11
     df_person_start = pd.concat([df11, df01, df10, df00])
     # We can split by current identifier and assign zeros where known
-    df00 = df_person_start[df_person_start["next_ident"] == "00"]
-    df10 = df_person_start[df_person_start["next_ident"] == "10"]
-    df01 = df_person_start[df_person_start["next_ident"] == "01"]
-    df11 = df_person_start[df_person_start["next_ident"] == "11"]
+    df00 = df_person_start[df_person_start["next_ident"] == "00"].copy()
+    df10 = df_person_start[df_person_start["next_ident"] == "10"].copy()
+    df01 = df_person_start[df_person_start["next_ident"] == "01"].copy()
+    df11 = df_person_start[df_person_start["next_ident"] == "11"].copy()
     # Assign known zeros
     for col in ["heart_next_guess"]:
         df11.loc[:,col] = 0
@@ -1331,6 +1457,8 @@ for subj_i in range(N):
                 break
         if true_bin <= 1:
             dose = 0.0;
+        elif true_bin >= len(dbins):
+                dose = dbins[-1]
         else:
             bin_low = dbins[true_bin-1]
             bin_high = dbins[true_bin]
@@ -1358,6 +1486,8 @@ for subj_i in range(N):
                 break
         if true_bin <= 1:
             dose = 0.0;
+        elif true_bin >= len(dbins):
+            dose = dbins[-1]
         else:
             bin_low = dbins[true_bin-1]
             bin_high = dbins[true_bin]
@@ -1385,6 +1515,8 @@ for subj_i in range(N):
                 break
         if true_bin <= 1:
             dose = 0.0;
+        elif true_bin >= len(dbins):
+            dose = dbins[-1]
         else:
             bin_low = dbins[true_bin-1]
             bin_high = dbins[true_bin]
@@ -1412,6 +1544,8 @@ for subj_i in range(N):
                 break
         if true_bin <= 1:
             dose = 0.0;
+        elif true_bin >= len(dbins):
+            dose = dbins[-1]
         else:
             bin_low = dbins[true_bin-1]
             bin_high = dbins[true_bin]
@@ -1439,6 +1573,8 @@ for subj_i in range(N):
                 break
         if true_bin <= 1:
             dose = 0.0;
+        elif true_bin >= len(dbins):
+            dose = dbins[-1]
         else:
             bin_low = dbins[true_bin-1]
             bin_high = dbins[true_bin]
@@ -1466,6 +1602,8 @@ for subj_i in range(N):
                 break
         if true_bin <= 1:
             dose = 0.0;
+        elif true_bin >= len(dbins):
+            dose = dbins[-1]
         else:
             bin_low = dbins[true_bin-1]
             bin_high = dbins[true_bin]
