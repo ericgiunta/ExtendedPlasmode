@@ -576,7 +576,7 @@ for subj_i in range(N):
         name1 = 'annual_dose_mgy_' + col + '_lag10'
         df_gen[name0] = df_gen.groupby('StudyID')[name1].cumsum() / 1000
     #
-    df_gen[col_keep].to_csv("Subj_PARA_"+str(subj_i)+".csv")
+    df_gen[col_keep].to_csv("NO_EVENTS/Subj_PARA_"+str(subj_i)+".csv")
 
 ## ---------------------------------------------- Finally the Random Forest models -------------------------------------------------------------------------------------- ##
 df_tot = pd.read_csv("preped_data.csv")
@@ -910,7 +910,7 @@ for subj_i in range(N):
         name1 = 'annual_dose_mgy_' + col + '_lag10'
         df_gen[name0] = df_gen.groupby('StudyID')[name1].cumsum() / 1000
     #
-    df_gen[col_keep].to_csv("Subj_RF_"+str(subj_i)+".csv")
+    df_gen[col_keep].to_csv("NO_EVENTS/Subj_RF_"+str(subj_i)+".csv")
 
 ## ------------------------------------------------------------------- And the Random Forest Directly Predicting doses ------------------------ ##
 
@@ -1092,15 +1092,15 @@ for subj_i in range(N):
         name1 = 'annual_dose_mgy_' + col + '_lag10'
         df_gen[name0] = df_gen.groupby('StudyID')[name1].cumsum() / 1000
     #
-    df_gen[col_keep].to_csv("Subj_RF_CATEG_"+str(subj_i)+".csv")
+    df_gen[col_keep].to_csv("NO_EVENTS/Subj_RF_CATEG_"+str(subj_i)+".csv")
     
 '''
 To calculate the accuracy plots, the loops were updated so that 'df_next' was replaced with 'df_person_start', 'df_gen' was removed, and the 'while len(df_next.index) > 0' loop was removed
 Instead of assigning to 'organ_next', the guesses are assigned to 'organ_next_guess', and no cumulative doses are calculated.
-As an example, the parametric version is reproduced below. For readability, the random forest versions are not reproduced.
+As an example, the parametric and random forest versions are reproduced below. For readability, the random forest version mode prediction method is not reproduced.
 '''
 
-df_tot = pd.read_csv("../NEW_RUNS/preped_data.csv")
+df_tot = pd.read_csv("preped_data.csv")
 # -------------------------------------------------------------------------------------- #
 
 dbins = [0]+list(np.logspace(-5,np.log10(650),40))
@@ -1112,7 +1112,9 @@ df_dose_maxage = df_dose_maxage[["age_entry"]]
 df_dose_maxage.columns = ["age_max"]
 df_person = df_tot.join(df_dose_maxage, on = "StudyID")
 
-subj_ids = df_person.StudyID
+person_train, person_test = train_test_split(df_person, test_size=0.20, random_state=0)
+
+subj_ids = person_test.StudyID
 rng = np.random.default_rng(seed = 374221226)
 #
 N = 10
@@ -1131,7 +1133,7 @@ col_keep = ['StudyID', 'age_entry',
 
 for subj_i in range(N):
     #
-    df_person_start = df_person.copy()
+    df_person_start = person_test.copy()
     # ------------------------------------------------------------------ # prep prev
     df_person_start["heart_prev"] = df_person_start["annual_dose_mgy_heart_lag10"]
     df_person_start["heart_prev_zero"] = (df_person_start["heart_prev"] == 0)
@@ -1285,4 +1287,194 @@ for subj_i in range(N):
     ## Now we bring it all together again
     df_person_start = pd.concat([df11, df01, df10, df00])
     # ---------------------------------------------------------- #
-    df_person_start.to_csv("Subj_PARA_"+str(subj_i)+"_accuracy.csv")
+    df_person_start.to_csv("ACCURACY/Subj_PARA_"+str(subj_i)+"_accuracy.csv")
+
+## --------------------------- Random Forest ------------------------------ ##
+person_train, person_test = train_test_split(df_person, test_size=0.20, random_state=0)
+
+subj_ids = person_test.StudyID
+rng = np.random.default_rng(seed = 374221226)
+#
+#m = 100000
+N = 10
+
+
+col_keep = ['StudyID', 'age_entry',
+       'age_exit', 'SES_HighestEd',
+       'sexm', 'yob_cat10', 'yob_cat6',
+       'annual_dose_mgy_colon_lag10', 'cumulative_dose_colon_lag10',
+       'annual_dose_mgy_heart_lag10', 'cumulative_dose_heart_lag10',
+       'annual_dose_mgy_brain_lag10', 'cumulative_dose_brain_lag10',
+       'annual_dose_mgy_bonem_lag10', 'cumulative_dose_bonem_lag10',
+       'annual_dose_mgy_lung_lag10', 'cumulative_dose_lung_lag10',
+       'annual_dose_mgy_esophagus_lag10', 'cumulative_dose_esophagus_lag10',
+       ]
+
+for subj_i in range(N):
+    print("Dataset: " + str(subj_i))
+    #
+    df_person_start = person_test.copy()
+    # --------------------------------------------------------------------------------------------------------------------------- #
+    # ------------------------------------------------------------------ # Colon
+    X_next_colon = df_person_start[x_col_colon]
+    y_next_colon_dist = base_rf_colon.predict_proba(X_next_colon)
+
+    y_next_colon_bin = []
+    y_next_colon = []
+    for dist in y_next_colon_dist:
+        cum_dist = np.cumsum(dist)
+        U = rng.random()
+        true_bin = 0
+        for i in range(len(cum_dist)):
+            if U <= cum_dist[i]:
+                true_bin = int(colon_classes[i])
+                break
+        if true_bin <= 1:
+            dose = 0.0;
+        else:
+            bin_low = dbins[true_bin-1]
+            bin_high = dbins[true_bin]
+            U = rng.random()
+            dose = (bin_high - bin_low)*U + bin_low
+        #
+        y_next_colon_bin.append(true_bin)
+        y_next_colon.append(dose)
+    df_person_start["colon_next_guess"] = y_next_colon
+    df_person_start["colon_bin_next"] = y_next_colon_bin
+    # ------------------------------------------------------------------ # Heart
+    X_next_heart = df_person_start[x_col_heart]
+
+    y_next_heart_dist = base_rf_heart.predict_proba(X_next_heart)
+
+    y_next_heart_bin = []
+    y_next_heart = []
+    for dist in y_next_heart_dist:
+        cum_dist = np.cumsum(dist)
+        U = rng.random()
+        true_bin = 0
+        for i in range(len(cum_dist)):
+            if U <= cum_dist[i]:
+                true_bin = int(heart_classes[i])
+                break
+        if true_bin <= 1:
+            dose = 0.0;
+        else:
+            bin_low = dbins[true_bin-1]
+            bin_high = dbins[true_bin]
+            U = rng.random()
+            dose = (bin_high - bin_low)*U + bin_low
+        #
+        y_next_heart_bin.append(true_bin)
+        y_next_heart.append(dose)
+    df_person_start["heart_next_guess"] = y_next_heart
+    df_person_start["heart_bin_next"] = y_next_heart_bin
+    # ------------------------------------------------------------------ # Brain
+    X_next_brain = df_person_start[x_col_brain]
+
+    y_next_brain_dist = base_rf_brain.predict_proba(X_next_brain)
+
+    y_next_brain_bin = []
+    y_next_brain = []
+    for dist in y_next_brain_dist:
+        cum_dist = np.cumsum(dist)
+        U = rng.random()
+        true_bin = 0
+        for i in range(len(cum_dist)):
+            if U <= cum_dist[i]:
+                true_bin = int(brain_classes[i])
+                break
+        if true_bin <= 1:
+            dose = 0.0;
+        else:
+            bin_low = dbins[true_bin-1]
+            bin_high = dbins[true_bin]
+            U = rng.random()
+            dose = (bin_high - bin_low)*U + bin_low
+        #
+        y_next_brain_bin.append(true_bin)
+        y_next_brain.append(dose)
+    df_person_start["brain_next_guess"] = y_next_brain
+    df_person_start["brain_bin_next"] = y_next_brain_bin
+    # ------------------------------------------------------------------ # Bone
+    X_next_bone = df_person_start[x_col_bone]
+
+    y_next_bone_dist = base_rf_bone.predict_proba(X_next_bone)
+
+    y_next_bone_bin = []
+    y_next_bone = []
+    for dist in y_next_bone_dist:
+        cum_dist = np.cumsum(dist)
+        U = rng.random()
+        true_bin = 0
+        for i in range(len(cum_dist)):
+            if U <= cum_dist[i]:
+                true_bin = int(bone_classes[i])
+                break
+        if true_bin <= 1:
+            dose = 0.0;
+        else:
+            bin_low = dbins[true_bin-1]
+            bin_high = dbins[true_bin]
+            U = rng.random()
+            dose = (bin_high - bin_low)*U + bin_low
+        #
+        y_next_bone_bin.append(true_bin)
+        y_next_bone.append(dose)
+    df_person_start["bone_next_guess"] = y_next_bone
+    df_person_start["bone_bin_next"] = y_next_bone_bin
+    # ------------------------------------------------------------------ # Lung
+    X_next_lung = df_person_start[x_col_lung]
+
+    y_next_lung_dist = base_rf_lung.predict_proba(X_next_lung)
+
+    y_next_lung_bin = []
+    y_next_lung = []
+    for dist in y_next_lung_dist:
+        cum_dist = np.cumsum(dist)
+        U = rng.random()
+        true_bin = 0
+        for i in range(len(cum_dist)):
+            if U <= cum_dist[i]:
+                true_bin = int(lung_classes[i])
+                break
+        if true_bin <= 1:
+            dose = 0.0;
+        else:
+            bin_low = dbins[true_bin-1]
+            bin_high = dbins[true_bin]
+            U = rng.random()
+            dose = (bin_high - bin_low)*U + bin_low
+        #
+        y_next_lung_bin.append(true_bin)
+        y_next_lung.append(dose)
+    df_person_start["lung_next_guess"] = y_next_lung
+    df_person_start["lung_bin_next"] = y_next_lung_bin
+    # ------------------------------------------------------------------ # Esophagus
+    X_next_eso = df_person_start[x_col_eso]
+
+    y_next_eso_dist = base_rf_eso.predict_proba(X_next_eso)
+
+    y_next_eso_bin = []
+    y_next_eso = []
+    for dist in y_next_eso_dist:
+        cum_dist = np.cumsum(dist)
+        U = rng.random()
+        true_bin = 0
+        for i in range(len(cum_dist)):
+            if U <= cum_dist[i]:
+                true_bin = int(eso_classes[i])
+                break
+        if true_bin <= 1:
+            dose = 0.0;
+        else:
+            bin_low = dbins[true_bin-1]
+            bin_high = dbins[true_bin]
+            U = rng.random()
+            dose = (bin_high - bin_low)*U + bin_low
+        #
+        y_next_eso_bin.append(true_bin)
+        y_next_eso.append(dose)
+    df_person_start["esophagus_next_guess"] = y_next_eso
+    df_person_start["esophagus_bin_next"] = y_next_eso_bin
+    # ---------------------------------------------------------- #
+    df_person_start.to_csv("ACCURACY/Subj_RF_"+str(subj_i)+".csv")

@@ -173,8 +173,8 @@ paras_censor = {0:[-0.9118052368077578,  0.24610932503697477, -15.60036404171181
 
 #
 #
-for i in range(500):
-    for j_name in ["CONST","PARA","RF"]:
+for i in range(10):
+    for j_name in ["CONST","PARA","RF", "RF_CATEG_"]:
         print("Event: " + str(i) + " " + j_name)
         iname = "NO_EVENTS/Subj_"+str(i)+"_"+j_name+".csv"
         oname = "WITH_EVENTS/Subj_"+str(i)+"_"+j_name+""

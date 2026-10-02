@@ -20,17 +20,9 @@ run_dose_model <- function(df, outcome, dose){
     print(outcome)
     print(e0)
     print(e1)
-    model_type <- "null"
-    a_n <- c(0)
-    if (e0$LogLik < e1$LogLik){
-      model_type <- "err"
-      a_n <- e1$beta_0
-      model <- as.formula(paste("Cox(age_entry, age_exit, ",outcome,") ~ plinear(", dose, ") + loglinear(factor(yob_cat10), factor(SES_HighestEd), sexm) + M()",sep=""))
-    } else {
-      model_type <- "hr"
-      a_n <- e0$beta_0
-      model <- as.formula(paste("Cox(age_entry, age_exit, ",outcome,") ~ loglinear(", dose, ", factor(yob_cat10), factor(SES_HighestEd), sexm) + M()",sep=""))
-    }
+    model_type <- "err"
+    a_n <- e1$beta_0
+    model <- as.formula(paste("Cox(age_entry, age_exit, ",outcome,") ~ plinear(", dose, ") + loglinear(factor(yob_cat10), factor(SES_HighestEd), sexm) + M()",sep=""))
     print(model_type)
     control <- list(Ncores=16, maxiters=c(1, 1), epsilon = 1e-6, der_epsilon = 1e-6, 'verbose'=F)
     e0 <- CoxRun(model, df, control = control, a_n = a_n)
@@ -67,56 +59,57 @@ run_nodose_model <- function(df, outcome){
 
 out_col <- c('Esophagus', 'lung', 'Parkinsons', 'Ischemic', 'CLL', 'AML', 'NonCLL_excAML', "Heart_excIsch", "AllLymphHema_excLeukAleuk", "AllCancer_excElse", "allevent", "censored")
 # Esophagus
-##sink("NEW_RUNS/eso.txt")
+sink("NEW_RUNS/eso.txt")
 outcomes <- c("Esophagus")
 dose <- "cumulative_dose_esophagus_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
-#stop()
-#sink()
+sink(NULL)
 # Lung
-#sink("NEW_RUNS/lung.txt")
+sink("NEW_RUNS/lung.txt")
 outcomes <- c("lung")
 dose <- "cumulative_dose_lung_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
+sink(NULL)
 # Brain
+sink("NEW_RUNS/brain.txt")
 outcomes <- c("Parkinsons")
 dose <- "cumulative_dose_brain_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
-#sink()
+sink(NULL)
 # Heart
-#sink("NEW_RUNS/heart.txt")
+sink("NEW_RUNS/heart.txt")
 outcomes <- c("Ischemic", "Heart_excIsch")
 dose <- "cumulative_dose_heart_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
-#sink()
+sink(NULL)
 # Colon
-#sink("NEW_RUNS/colon.txt")
+sink("NEW_RUNS/colon.txt")
 outcomes <- c("CLL", "AML", "NonCLL_excAML", "AllLymphHema_excLeukAleuk")
 dose <- "cumulative_dose_colon_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
-#sink()
+sink(NULL)
 # All
-#sink("NEW_RUNS/all.txt")
+sink("NEW_RUNS/all.txt")
 outcomes <- c("AllCancer_excElse")#, "allevent", "censored")
 dose <- "cumulative_dose_colon_lag10"
 for (outcome in outcomes){
     run_dose_model(df, outcome, dose)
 }
-#sink()
+sink(NULL)
 # None
-#sink("NEW_RUNS/none.txt")
+sink("NEW_RUNS/none.txt")
 outcomes <- c( "censored")
 for (outcome in outcomes){
     run_nodose_model(df, outcome)
 }
-#sink()
+sink(NULL)

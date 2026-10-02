@@ -618,7 +618,7 @@ outcome_short = ["eso", "lung", "park", "isc", "cll", "aml", "ncll", "HeIs", "AL
 #
 #assert False
 bash_script += 'echo "All and Events"\n'
-for i in range(500):
+for i in range(10):
     for j_name in ["CONST","PARA","RF"]:
         bash_script += "echo " + str(i) + " " + j_name + "\n"
         ## All events
@@ -627,7 +627,7 @@ for i in range(500):
             f.write(temp_script_group_event.replace("{count}",str(i)).replace("{name}",str(j_name)))
         bash_script += "Rscript " + "Analyze_"+str(i)+"_"+j_name+"_event_group.R" + " &> ../RESULTS/COX_" + str(i)+"_"+j_name+"_event_group.txt\n"
 bash_script += 'echo "Groups"\n'
-for i in range(500):
+for i in range(10):
     for j_name in ["CONST","PARA","RF"]:
         bash_script += "echo " + str(i)+"_"+j_name + "\n"
         ## All heart disease
@@ -641,7 +641,7 @@ for i in range(500):
             f.write(temp_script_group_cancer.replace("{count}",str(i)).replace("{name}",str(j_name)))
         bash_script += "Rscript " + "Analyze_"+str(i)+"_"+j_name+"_cancer_group.R" + " &> ../RESULTS/COX_" + str(i)+"_"+j_name+"_cancer_group.txt\n"
 bash_script += 'echo "Pairs and Single"\n'
-for i in range(500):
+for i in range(10):
     for j_name in ["CONST","PARA","RF"]:
         bash_script += "echo " + str(i)+"_"+j_name + "\n"
         # Single and Pair Regressions

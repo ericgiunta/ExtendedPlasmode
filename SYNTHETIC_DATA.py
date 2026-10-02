@@ -7,21 +7,6 @@ np.random.seed(1022026)
 # This file produces source files with similar types of data as the original files
 # NOTE THE SYNTHETIC DATA WILL NOT REPRODUCE PAPER RESULTS, AND WILL NOT MATCH THE HARD CODED PARAMETRIC DISTRIBUTIONS
 
-# NPP23A01_1.csv
-#'StudyID', 'SES_HighestEd', 'YOH', "YOB", 'duremp', 'sexm', 'SeqNo', "AllCancer", "Esophagus", "lung", "AllLymphaticHematopoietic", "Parkinsons", "HeartDis", "Ischemic", "NonCLL", "LeukemiaAleukemia", "CLL", "AML"
-# NPP23A01_4.csv
-#'StudyID', 'age_entry', 'age_exit', 'cumulative_dose_brain_lag10', 'SeqNo'
-# NPP23A01_5.csv
-#'StudyID', 'age_entry', 'age_exit', 'cumulative_dose_colon_lag10', 'SeqNo', 'year'
-# NPP23A01_6.csv
-#'StudyID', 'year', 'age_entry', 'age_exit', 'cumulative_dose_esophagus_lag10', 'SeqNo'
-# NPP23A01_7.csv
-#'StudyID', 'year', 'age_entry', 'age_exit', 'cumulative_dose_lung_lag10', 'SeqNo'
-# NPP23A01_8.csv
-#'StudyID', 'age_entry', 'age_exit', 'cumulative_dose_bonem_lag10', 'SeqNo'
-# NPP23A01_9.csv
-#'StudyID', 'age_entry', 'age_exit', 'cumulative_dose_heart_lag10', 'SeqNo'
-
 # Person Info
 studyid_person = []
 ses_highest = []
