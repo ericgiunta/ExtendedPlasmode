@@ -11,13 +11,13 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
 # We start by preping the data, putting into one big table
-df_colon  = pl.read_csv("NPP23A01_5.csv")
-df_heart  = pl.read_csv("NPP23A01_9.csv")
-df_brain  = pl.read_csv("NPP23A01_4.csv")
-df_person = pl.read_csv("NPP23A01_1.csv")
-df_bone   = pl.read_csv("NPP23A01_8.csv")
-df_lung   = pl.read_csv("NPP23A01_7.csv")
-df_esop   = pl.read_csv("NPP23A01_6.csv")
+df_colon  = pl.read_csv("SIM_NPP23A01_5.csv")
+df_heart  = pl.read_csv("SIM_NPP23A01_9.csv")
+df_brain  = pl.read_csv("SIM_NPP23A01_4.csv")
+df_person = pl.read_csv("SIM_NPP23A01_1.csv")
+df_bone   = pl.read_csv("SIM_NPP23A01_8.csv")
+df_lung   = pl.read_csv("SIM_NPP23A01_7.csv")
+df_esop   = pl.read_csv("SIM_NPP23A01_6.csv")
 
 ## Filter the tables into the necessary columns
 #
@@ -43,7 +43,28 @@ df_person = df_person.with_columns(
     yob_cat10 = pl.col("YOB").cut(breaks = [1916, 1921, 1926, 1931, 1936, 1941, 1946, 1951, 1956], labels = [str(i) for i in [0,1,2,3,4,5,6,7,8,9]]),
     yob_cat6 = pl.col("YOB").cut(breaks = [1920, 1930, 1940, 1950, 1960], labels = [str(i) for i in [0,1,2,3,4,5]])
     )
-person_columns = ['StudyID', 'yob_cat10', 'yob_cat6', 'SES_HighestEd', 'YOH', "YOB", 'duremp', 'sexm', 'SeqNo']
+df_person = df_person.with_columns(
+    NonCLL_excAML = pl.col("NonCLL") - pl.col("AML"),
+    Heart_excIsch = pl.col("HeartDis") - pl.col("Ischemic"),
+    AllLymphHema_excLeukAleuk = pl.col("AllLymphaticHematopoietic") - pl.col("LeukemiaAleukemia"),
+    AllCancer_excElse = pl.col("AllCancer") - pl.col("Esophagus") - pl.col("lung")  - pl.col("AllLymphaticHematopoietic")
+)
+df_person = df_person.with_columns(
+    NonCLL_excAML = pl.when(pl.col("NonCLL_excAML") < 1).then(pl.lit(0)).otherwise(pl.lit(1)),
+    Heart_excIsch = pl.when(pl.col("Heart_excIsch") < 1).then(pl.lit(0)).otherwise(pl.lit(1)),
+    AllLymphHema_excLeukAleuk = pl.when(pl.col("AllLymphHema_excLeukAleuk") < 1).then(pl.lit(0)).otherwise(pl.lit(1)),
+    AllCancer_excElse = pl.when(pl.col("AllCancer_excElse") < 1).then(pl.lit(0)).otherwise(pl.lit(1))
+)
+
+df_person = df_person.with_columns(
+    allevent = pl.col('Esophagus') + pl.col('lung') + pl.col('Parkinsons') + pl.col('Ischemic') + pl.col('CLL') + pl.col('AML') + pl.col('NonCLL_excAML') + pl.col("Heart_excIsch") + pl.col("AllLymphHema_excLeukAleuk") + pl.col("AllCancer_excElse")
+)
+df_person = df_person.with_columns(
+    allevent = pl.when(pl.col("allevent") > 0).then(pl.lit(1)).otherwise(pl.lit(0))
+)
+df_person = df_person.with_columns(
+    censored = pl.lit(1) - pl.col("allevent")
+person_columns = ['StudyID', 'yob_cat10', 'yob_cat6', 'SES_HighestEd', 'YOH', "YOB", 'duremp', 'sexm', 'SeqNo', 'Esophagus', 'lung', 'Parkinsons', 'Ischemic', 'CLL', 'AML', 'NonCLL_excAML', "Heart_excIsch", "AllLymphHema_excLeukAleuk", "AllCancer_excElse", "allevent", "censored"]
 
 df_person = df_person.select(person_columns)
 
@@ -55,15 +76,19 @@ df_organ = df_organ.join(df_bone.select(['cumulative_dose_bonem_lag10',     'Seq
 df_organ = df_organ.join(df_lung.select(['cumulative_dose_lung_lag10',      'SeqNo']), on = 'SeqNo')
 df_organ = df_organ.join(df_esop.select(['cumulative_dose_esophagus_lag10', 'SeqNo']), on = 'SeqNo')
 #
-df_total = df_organ.join(df_person.select(['StudyID', 'yob_cat10', 'yob_cat6', 'YOB', 'SES_HighestEd', 'sexm', 'YOH', 'duremp']), on = "StudyID")
+df_total = df_organ.join(df_person.select(['StudyID', 'yob_cat10', 'yob_cat6', 'YOB', 'SES_HighestEd', 'sexm', 'YOH', 'duremp', 'Esophagus', 'lung', 'Parkinsons', 'Ischemic', 'CLL', 'AML', 'NonCLL_excAML', "Heart_excIsch", "AllLymphHema_excLeukAleuk", "AllCancer_excElse", "allevent", "censored"]), on = "StudyID")
 
 df_total = df_total.with_columns(
     age_exit = pl.col("age_exit").round(1),
     age_entry = pl.col("age_entry").round(1),
 )
+total_columns = ['StudyID', 'age_entry', 'age_exit', 'yob_cat10', 'yob_cat6', 'YOH', 'YOB', 'year', 'duremp', 'SES_HighestEd', 'sexm', 'cumulative_dose_colon_lag10', 'cumulative_dose_heart_lag10', 'cumulative_dose_brain_lag10', 'cumulative_dose_bonem_lag10', 'cumulative_dose_lung_lag10', 'cumulative_dose_esophagus_lag10', 'Esophagus', 'lung', 'Parkinsons', 'Ischemic', 'CLL', 'AML', 'NonCLL_excAML', "Heart_excIsch", "AllLymphHema_excLeukAleuk", "AllCancer_excElse", "allevent", "censored", 'SeqNo']
+df_total = df_total.select(total_columns)
+df_total.write_csv("df_total.csv")
+
+# Further analysis does not need the events
 total_columns = ['StudyID', 'age_entry', 'age_exit', 'yob_cat10', 'yob_cat6', 'YOH', 'YOB', 'year', 'duremp', 'SES_HighestEd', 'sexm', 'cumulative_dose_colon_lag10', 'cumulative_dose_heart_lag10', 'cumulative_dose_brain_lag10', 'cumulative_dose_bonem_lag10', 'cumulative_dose_lung_lag10', 'cumulative_dose_esophagus_lag10', 'SeqNo']
 df_total = df_total.select(total_columns)
-
 ## ------------------------------------------------------------ PULL OUT THE MGY DOSE, NOT THE MSV DOSE ----------------------------------------- ##
 
 df_minage = df_total.group_by("StudyID").min()

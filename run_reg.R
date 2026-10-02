@@ -4,7 +4,7 @@ library(parallel)
 
 options("width"=200)
 
-df <- fread("NEW_RUNS/df_total.csv")
+df <- fread("df_total.csv")
 
 run_dose_model <- function(df, outcome, dose){
     base_model <- as.formula(paste("Cox(age_entry, age_exit, ",outcome,") ~ loglinear(factor(yob_cat10), factor(SES_HighestEd), sexm) + M()",sep=""))
